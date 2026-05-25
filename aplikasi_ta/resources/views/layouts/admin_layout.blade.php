@@ -63,9 +63,9 @@
                     <!-- DATA MASTER -->
                     <div class="sb-sidenav-menu-heading">Data Master</div>
 
-                    <a class="nav-link" href="{{ route('pengguna.index') }}">
+                    <a class="nav-link" href="{{ route('akun.index') }}">
                         <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
-                        Data Pengguna
+                        Data Akun
                     </a>
 
                     <!-- MENU DATA -->

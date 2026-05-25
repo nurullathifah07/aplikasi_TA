@@ -11,8 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('penggunas', function (Blueprint $table) {
+        Schema::create('akun', function (Blueprint $table) {
+
             $table->id();
+
+            $table->string('foto')->nullable();
+
+            $table->string('username')->unique();
+
+            $table->string('email')->unique();
+
+            $table->string('password');
+
+            $table->string('role')->default('admin');
+
             $table->timestamps();
         });
     }
@@ -22,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('penggunas');
+        Schema::dropIfExists('akun');
     }
 };
