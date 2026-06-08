@@ -2,17 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Akun extends Model
+class Akun extends Authenticatable
 {
     protected $table = 'akun';
 
     protected $fillable = [
         'foto',
+        'nama',
+        'no_telpon',
         'username',
         'email',
         'password',
-        'role'
+        'role',
     ];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    protected function casts(): array
+    {
+        return [];
+    }
 }

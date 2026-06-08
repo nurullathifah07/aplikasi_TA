@@ -2,24 +2,36 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Akun;
+use App\Models\KomponenDarah;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Buat akun admin default
+        Akun::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'nama' => 'Administrator',
+                'no_telpon' => '08123456789',
+                'email' => 'admin@pmi-tanahlaut.com',
+                'password' => Hash::make('admin123'),
+                'role' => 'admin',
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Buat komponen darah default
+        KomponenDarah::firstOrCreate(
+            ['kode' => 'WB'],
+            ['nama_lengkap' => 'Whole Blood']
+        );
+
+        KomponenDarah::firstOrCreate(
+            ['kode' => 'PRC'],
+            ['nama_lengkap' => 'Packed Red Cell']
+        );
     }
 }
