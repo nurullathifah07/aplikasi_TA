@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\TemplatePermintaanDarahExport;
+use App\Imports\PermintaanDarahImport;
 use App\Models\KomponenDarah;
 use App\Models\PermintaanDarah;
 use App\Models\RumahSakit;
@@ -210,75 +212,39 @@ class PermintaanDarahController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:csv,txt|max:5120',
+            'file' => 'required|mimes:xlsx,xls|max:5120',
         ]);
 
-        $file = fopen($request->file('file')->getRealPath(), 'r');
+        $import = new PermintaanDarahImport();
+        Excel::import($import, $request->file('file'));
 
-        // Lewati header
-        fgetcsv($file);
+        $errors = $import->getErrors();
+        $imported = $import->getImportedCount();
 
-        $jumlahImport = 0;
-
-        while (($row = fgetcsv($file)) !== false) {
-
-            PermintaanDarah::create([
-                'tanggal' => $row[0],
-                'rumah_sakit_id' => $row[1],
-                'golongan_darah' => $row[2],
-                'komponen_darah_id' => $row[3],
-                'jumlah' => $row[4],
-                'status' => $row[5],
+        if (count($errors) > 0 && $imported == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Import gagal. Tidak ada data yang berhasil diimport.',
+                'errors' => $errors,
             ]);
-
-            $jumlahImport++;
         }
 
-        fclose($file);
+        $message = "Berhasil import {$imported} data.";
+        if (count($errors) > 0) {
+            $message .= " " . count($errors) . " baris gagal.";
+        }
 
         return response()->json([
             'success' => true,
-            'message' => "Berhasil import {$jumlahImport} data."
+            'message' => $message,
+            'errors' => $errors,
+            'imported' => $imported,
         ]);
     }
 
     // Download template Excel untuk import
     public function downloadTemplate()
     {
-        $filename = 'template_permintaan_darah.csv';
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-        ];
-
-        $callback = function () {
-
-            $file = fopen('php://output', 'w');
-
-            // Header
-            fputcsv($file, [
-                'tanggal',
-                'rumah_sakit_id',
-                'golongan_darah',
-                'komponen_darah_id',
-                'jumlah',
-                'status'
-            ]);
-
-            // Contoh data
-            fputcsv($file, [
-                '2026-06-01',
-                1,
-                'A',
-                1,
-                5,
-                'pending'
-            ]);
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return Excel::download(new TemplatePermintaanDarahExport(), 'template_permintaan_darah.xlsx');
     }
 }
