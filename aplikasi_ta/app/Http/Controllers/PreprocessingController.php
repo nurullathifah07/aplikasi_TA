@@ -51,8 +51,18 @@ class PreprocessingController extends Controller
             $query->where('tanggal', '<=', $request->tanggal_selesai);
         }
 
-        $count = $query->count();
-        $hariUnik = $query->distinct('tanggal')->count('tanggal');
+        $count = (clone $query)->count();
+        $hariUnik = (clone $query)->distinct('tanggal')->count('tanggal');
+
+        $aggregateValues = (clone $query)
+            ->selectRaw('tanggal, SUM(jumlah) as total')
+            ->groupBy('tanggal')
+            ->pluck('total')
+            ->map(fn($value) => (float) $value)
+            ->toArray();
+
+        $mean = count($aggregateValues) > 0 ? array_sum($aggregateValues) / count($aggregateValues) : 0;
+        $median = count($aggregateValues) > 0 ? $this->calculateMedian($aggregateValues) : 0;
 
         // Hitung total hari dalam range
         $totalHari = 0;
@@ -65,10 +75,12 @@ class PreprocessingController extends Controller
             'hari_ada_data' => $hariUnik,
             'total_hari_range' => $totalHari,
             'hari_kosong' => $totalHari > 0 ? $totalHari - $hariUnik : 0,
+            'mean' => round($mean, 2),
+            'median' => round($median, 2),
         ]);
     }
 
-    // Melakukan preprocessing: aggregate harian, mengisi missing values (hari tanpa permintaan = 0), dan deteksi outlier dengan IQR
+    // Melakukan preprocessing: aggregate harian, imputasi missing values, dan deteksi outlier dengan IQR
     public function proses(Request $request)
     {
         $request->validate([
@@ -76,6 +88,7 @@ class PreprocessingController extends Controller
             'komponen_darah_id' => 'required|exists:komponen_darah,id',
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+            'metode_imputasi' => 'required|in:zero,mean,median',
         ]);
 
         $golongan = $request->golongan_darah;
@@ -97,36 +110,50 @@ class PreprocessingController extends Controller
         $aggregated = $permintaan->groupBy(fn($item) => $item->tanggal->format('Y-m-d'))
             ->map(fn($group) => $group->sum('jumlah'));
 
+        $availableValues = $aggregated->values()->map(fn($value) => (float) $value)->toArray();
+        $mean = count($availableValues) > 0 ? array_sum($availableValues) / count($availableValues) : 0;
+        $median = count($availableValues) > 0 ? $this->calculateMedian($availableValues) : 0;
+        $imputationValue = match ($request->metode_imputasi) {
+            'mean' => $mean,
+            'median' => $median,
+            default => 0,
+        };
+
         // Gunakan range tanggal yang dipilih user
         $startDate = Carbon::parse($request->tanggal_mulai);
         $endDate = Carbon::parse($request->tanggal_selesai);
         $period = CarbonPeriod::create($startDate, $endDate);
 
-        // Isi missing values dengan 0 untuk hari yang tidak ada permintaan
+        // Isi missing values sesuai metode yang dipilih user
         $filledData = [];
         foreach ($period as $date) {
             $dateStr = $date->format('Y-m-d');
+            $isMissing = !isset($aggregated[$dateStr]);
             $filledData[] = [
                 'tanggal' => $dateStr,
-                'jumlah' => $aggregated[$dateStr] ?? 0,
+                'jumlah' => $isMissing ? round($imputationValue, 2) : $aggregated[$dateStr],
+                'is_missing' => $isMissing,
             ];
         }
 
-        // Deteksi outlier menggunakan metode IQR
-        $values = array_column($filledData, 'jumlah');
-        $outlierIndices = $this->detectOutliers($values);
+        // Deteksi outlier hanya dari data asli yang tersedia, bukan dari data hasil imputasi.
+        // Ini mencegah nilai imputasi yang dominan membuat data normal ikut dianggap outlier.
+        $originalValues = array_values($availableValues);
+        [$lowerBound, $upperBound] = $this->calculateOutlierBounds($originalValues);
 
-        // Tandai dan handle outlier (ganti dengan median)
-        $median = $this->calculateMedian($values);
+        // Tandai dan handle outlier (ganti dengan median dari data asli)
+        $median = $this->calculateMedian($originalValues);
         $outliers = [];
 
-        foreach ($outlierIndices as $index) {
-            $outliers[] = [
-                'tanggal' => $filledData[$index]['tanggal'],
-                'nilai_asli' => $filledData[$index]['jumlah'],
-                'nilai_pengganti' => $median,
-            ];
-            $filledData[$index]['jumlah'] = $median;
+        foreach ($filledData as $index => $item) {
+            if (!$item['is_missing'] && ($item['jumlah'] < $lowerBound || $item['jumlah'] > $upperBound)) {
+                $outliers[] = [
+                    'tanggal' => $item['tanggal'],
+                    'nilai_asli' => $item['jumlah'],
+                    'nilai_pengganti' => $median,
+                ];
+                $filledData[$index]['jumlah'] = $median;
+            }
         }
 
         // Simpan hasil preprocessing ke session
@@ -136,6 +163,8 @@ class PreprocessingController extends Controller
             'preprocessing_config' => [
                 'golongan_darah' => $golongan,
                 'komponen_darah_id' => $komponenId,
+                'metode_imputasi' => $request->metode_imputasi,
+                'nilai_imputasi' => round($imputationValue, 2),
             ],
         ]);
 
@@ -146,16 +175,7 @@ class PreprocessingController extends Controller
     // Deteksi outlier menggunakan metode IQR (Interquartile Range)
     private function detectOutliers(array $values): array
     {
-        $sorted = $values;
-        sort($sorted);
-        $count = count($sorted);
-
-        $q1 = $this->calculatePercentile($sorted, 25);
-        $q3 = $this->calculatePercentile($sorted, 75);
-        $iqr = $q3 - $q1;
-
-        $lowerBound = $q1 - (1.5 * $iqr);
-        $upperBound = $q3 + (1.5 * $iqr);
+        [$lowerBound, $upperBound] = $this->calculateOutlierBounds($values);
 
         $outlierIndices = [];
         foreach ($values as $index => $value) {
@@ -167,26 +187,44 @@ class PreprocessingController extends Controller
         return $outlierIndices;
     }
 
+    // Hitung batas outlier IQR dari data asli
+    private function calculateOutlierBounds(array $values): array
+    {
+        if (count($values) < 4) {
+            return [-PHP_FLOAT_MAX, PHP_FLOAT_MAX];
+        }
+
+        $sorted = $values;
+        sort($sorted);
+
+        $q1 = $this->calculatePercentile($sorted, 25);
+        $q3 = $this->calculatePercentile($sorted, 75);
+        $iqr = $q3 - $q1;
+
+        if ($iqr == 0) {
+            return [-PHP_FLOAT_MAX, PHP_FLOAT_MAX];
+        }
+
+        return [
+            $q1 - (1.5 * $iqr),
+            $q3 + (1.5 * $iqr),
+        ];
+    }
+
     // Hitung percentile dari array yang sudah di-sort
     private function calculatePercentile(array $sorted, float $percentile): float
     {
         $count = count($sorted);
-
         $index = ($percentile / 100) * ($count - 1);
-
         $lower = (int) floor($index);
         $upper = (int) ceil($index);
-
         $fraction = $index - $lower;
 
-        if ($lower === $upper) {
-            return (float) $sorted[$lower];
+        if ($lower == $upper) {
+            return $sorted[$lower];
         }
 
-        return (float) (
-            $sorted[$lower] +
-            ($fraction * ($sorted[$upper] - $sorted[$lower]))
-        );
+        return $sorted[$lower] + ($fraction * ($sorted[$upper] - $sorted[$lower]));
     }
 
     // Hitung median dari array
@@ -194,14 +232,13 @@ class PreprocessingController extends Controller
     {
         $sorted = $values;
         sort($sorted);
-
         $count = count($sorted);
-        $middle = intdiv($count, 2);
+        $middle = (int) floor($count / 2);
 
-        if ($count % 2 === 0) {
+        if ($count % 2 == 0) {
             return ($sorted[$middle - 1] + $sorted[$middle]) / 2;
         }
 
-        return (float) $sorted[$middle];
+        return $sorted[$middle];
     }
 }

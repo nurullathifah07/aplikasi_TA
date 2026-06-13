@@ -31,7 +31,7 @@
     <strong>Preprocessing</strong> meliputi:
     <ul class="mb-0 mt-1">
         <li>Aggregasi data permintaan per hari</li>
-        <li>Handling missing values (hari tanpa permintaan diisi 0)</li>
+        <li>Handling missing values (hari tanpa permintaan diisi 0, mean, atau median)</li>
         <li>Deteksi dan penanganan outlier (metode IQR, diganti median)</li>
     </ul>
 </div>
@@ -71,6 +71,14 @@
                 <div class="col-md-3 mb-3">
                     <label for="tanggal_selesai" class="form-label">Tanggal Selesai</label>
                     <input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="metode_imputasi" class="form-label">Metode Imputasi</label>
+                    <select class="form-select" id="metode_imputasi" name="metode_imputasi" required>
+                        <option value="median" selected>Median</option>
+                        <option value="mean">Mean</option>
+                        <option value="zero">Isi 0</option>
+                    </select>
                 </div>
             </div>
 
@@ -113,8 +121,8 @@
                                 <td>{{ \Carbon\Carbon::parse($item['tanggal'])->format('d/m/Y') }}</td>
                                 <td>{{ $item['jumlah'] }}</td>
                                 <td>
-                                    @if ($item['jumlah'] == 0)
-                                        <span class="badge bg-secondary">Missing → 0</span>
+                                    @if (!empty($item['is_missing']))
+                                        <span class="badge bg-secondary">Missing → {{ $item['jumlah'] }}</span>
                                     @else
                                         @php
                                             $isOutlier = collect($outliers)->where('tanggal', $item['tanggal'])->first();
@@ -175,7 +183,7 @@
             <div class="card-body">
                 <ul class="list-unstyled mb-0">
                     <li><strong>Total data:</strong> {{ count($preprocessed) }} hari</li>
-                    <li><strong>Missing values:</strong> {{ collect($preprocessed)->where('jumlah', 0)->count() }} hari</li>
+                    <li><strong>Missing values:</strong> {{ collect($preprocessed)->where('is_missing', true)->count() }} hari</li>
                     <li><strong>Outlier:</strong> {{ count($outliers) }} data</li>
                     <li><strong>Rata-rata:</strong> {{ round(collect($preprocessed)->avg('jumlah'), 2) }} kantong/hari</li>
                 </ul>
@@ -243,6 +251,7 @@ function cekDataTersedia() {
     var komponen = $('#komponen_darah_id').val();
     var mulai = $('#tanggal_mulai').val();
     var selesai = $('#tanggal_selesai').val();
+    var metode = $('#metode_imputasi').val();
 
     if (!golongan || !komponen || !mulai || !selesai) {
         $('#infoData').hide();
@@ -260,7 +269,9 @@ function cekDataTersedia() {
     }, function(data) {
         var html = '<strong>' + data.total_record + ' record</strong> ditemukan | ';
         html += '<strong>' + data.hari_ada_data + ' hari</strong> ada data dari total <strong>' + data.total_hari_range + ' hari</strong> dalam range | ';
-        html += '<strong>' + data.hari_kosong + ' hari</strong> akan diisi 0 (missing values)';
+        var nilaiImputasi = metode === 'mean' ? data.mean : (metode === 'median' ? data.median : 0);
+        var labelMetode = metode === 'mean' ? 'mean' : (metode === 'median' ? 'median' : '0');
+        html += '<strong>' + data.hari_kosong + ' hari</strong> akan diisi dengan <strong>' + labelMetode + ' (' + nilaiImputasi + ')</strong>';
 
         if (data.hari_ada_data < 4) {
             html += '<br><span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Data terlalu sedikit! Minimal 4 hari ada data.</span>';
@@ -272,6 +283,6 @@ function cekDataTersedia() {
     });
 }
 
-$('#golongan_darah, #komponen_darah_id, #tanggal_mulai, #tanggal_selesai').on('change', cekDataTersedia);
+$('#golongan_darah, #komponen_darah_id, #tanggal_mulai, #tanggal_selesai, #metode_imputasi').on('change', cekDataTersedia);
 </script>
 @endpush
