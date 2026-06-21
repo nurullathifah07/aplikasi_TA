@@ -48,7 +48,7 @@
 
                 @if ($akun->foto)
 
-                    <img src="{{ asset('storage/' . $akun->foto) }}"
+                    <img src="{{ asset($akun->foto) }}"
                          width="80"
                          height="80"
                          class="rounded-circle mb-3 border"
@@ -56,16 +56,43 @@
 
                 @else
 
-                    <img src="https://via.placeholder.com/80"
-                         width="80"
-                         height="80"
-                         class="rounded-circle mb-3 border">
+                    <div class="rounded-circle border d-inline-flex align-items-center justify-content-center bg-light mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="fas fa-user text-secondary fa-2x"></i>
+                    </div>
 
                 @endif
 
                 <input type="file"
                        name="foto"
                        class="form-control">
+
+            </div>
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Nama
+                </label>
+
+                <input type="text"
+                       name="nama"
+                       class="form-control"
+                       value="{{ $akun->nama }}"
+                       required>
+
+            </div>
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    No. Telpon
+                </label>
+
+                <input type="text"
+                       name="no_telpon"
+                       class="form-control"
+                       value="{{ $akun->no_telpon }}">
 
             </div>
 
@@ -119,7 +146,9 @@
                 <input type="text"
                        name="role"
                        class="form-control"
-                       value="{{ $akun->role }}">
+                       value="{{ $akun->role }}"
+                       disabled>
+                <input type="hidden" name="role" value="{{ $akun->role }}">
 
             </div>
 

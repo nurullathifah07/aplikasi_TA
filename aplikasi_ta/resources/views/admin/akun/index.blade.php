@@ -39,14 +39,6 @@
 
     <div class="card-body">
 
-        @if(session('success'))
-
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-
-        @endif
-
         <table id="datatablesSimple"
                class="table table-bordered table-hover text-center align-middle">
 
@@ -56,9 +48,10 @@
 
                     <th>No</th>
                     <th>Foto</th>
+                    <th>Nama</th>
+                    <th>No. Telpon</th>
                     <th>Username</th>
                     <th>Email</th>
-                    <th>Password</th>
                     <th>Role</th>
                     <th>Aksi</th>
 
@@ -80,7 +73,7 @@
 
                             @if ($item->foto)
 
-                                <img src="{{ asset('storage/' . $item->foto) }}"
+                                <img src="{{ asset($item->foto) }}"
                                      class="rounded-circle border"
                                      width="50"
                                      height="50"
@@ -88,13 +81,21 @@
 
                             @else
 
-                                <img src="https://via.placeholder.com/50"
-                                     class="rounded-circle border"
-                                     width="50"
-                                     height="50">
+                                <div class="rounded-circle border d-inline-flex align-items-center justify-content-center bg-light"
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-user text-secondary fa-lg"></i>
+                                </div>
 
                             @endif
 
+                        </td>
+
+                        <td>
+                            {{ $item->nama }}
+                        </td>
+
+                        <td>
+                            {{ $item->no_telpon ?? '-' }}
                         </td>
 
                         <td>
@@ -103,10 +104,6 @@
 
                         <td>
                             {{ $item->email }}
-                        </td>
-
-                        <td>
-                            ********
                         </td>
 
                         <td>
@@ -137,8 +134,7 @@
                                     @method('DELETE')
 
                                     <button type="submit"
-                                            class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Yakin ingin menghapus data ini?')">
+                                            class="btn btn-danger btn-sm btn-delete">
 
                                         <i class="fas fa-trash"></i>
 
@@ -156,7 +152,7 @@
 
                     <tr>
 
-                        <td colspan="7">
+                        <td colspan="8">
                             Data akun belum tersedia
                         </td>
 

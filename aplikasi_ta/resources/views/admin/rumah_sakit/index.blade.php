@@ -22,7 +22,7 @@
             <thead class="table-dark-red">
                 <tr>
                     <th width="5%">No</th>
-                    <th width="5%">ID</th>
+                    <!-- <th width="5%">ID</th> -->
                     <th>Nama Rumah Sakit</th>
                     <th>Alamat</th>
                     <th width="15%">Aksi</th>
@@ -32,7 +32,7 @@
                 @foreach ($rumahSakit as $rs)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td>{{ $rs->id }}</td>
+                    <!-- <td>{{ $rs->id }}</td> -->
                     <td>{{ $rs->nama }}</td>
                     <td>{{ $rs->alamat }}</td>
                     <td>

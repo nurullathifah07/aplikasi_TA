@@ -48,6 +48,33 @@
             <div class="mb-3">
 
                 <label class="form-label">
+                    Nama
+                </label>
+
+                <input type="text"
+                       name="nama"
+                       class="form-control"
+                       placeholder="Masukkan nama lengkap"
+                       required>
+
+            </div>
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    No. Telpon
+                </label>
+
+                <input type="text"
+                       name="no_telpon"
+                       class="form-control"
+                       placeholder="Masukkan no. telpon">
+
+            </div>
+
+            <div class="mb-3">
+
+                <label class="form-label">
                     Username
                 </label>
 
@@ -96,7 +123,9 @@
                 <input type="text"
                         name="role"
                         class="form-control"
-                        value="admin">
+                        value="admin"
+                        disabled>
+                <input type="hidden" name="role" value="admin">
 
             </div>
 
