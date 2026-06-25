@@ -16,6 +16,23 @@
     div.dataTables_processing>div:last-child {
         display: none !important;
     }
+
+    .stat-card {
+        text-align: center;
+        padding: 20px 10px;
+    }
+
+    .stat-card .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 8px;
+    }
 </style>
 @endpush
 
@@ -27,24 +44,13 @@
     <li class="breadcrumb-item active">Preprocessing</li>
 </ol>
 
-<div class="alert alert-info">
-    <i class="fas fa-info-circle me-1"></i>
-    <strong>Preprocessing</strong> meliputi:
-    <ul class="mb-0 mt-1">
-        <li>Aggregasi data permintaan per hari</li>
-        <!-- <li>Handling missing values (hari tanpa permintaan diisi 0, mean, atau median)</li> -->
-        <li>Handling missing values (hari tanpa permintaan diisi median)</li>
-        <li>Deteksi dan penanganan outlier (metode IQR, diganti median)</li>
-    </ul>
-</div>
-
-<!-- Form Filter -->
+<!-- LANGKAH 1 -->
 <div class="card mb-4">
     <div class="card-header">
-        <i class="fas fa-filter me-1"></i> Pilih Data untuk Preprocessing
+        <strong>LANGKAH 1</strong> — PILIH DATA UNTUK DIPROSES
     </div>
     <div class="card-body">
-        <form action="{{ route('preprocessing.proses') }}" method="POST">
+        <form action="{{ route('preprocessing.proses') }}" method="POST" id="formPreprocessing">
             @csrf
             <div class="row">
                 <div class="col-md-3 mb-3">
@@ -74,7 +80,9 @@
                     <label for="tanggal_selesai" class="form-label">Tanggal Selesai</label>
                     <input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai" required>
                 </div>
-                <div class="col-md-3 mb-3" style="display: none;">
+            </div>
+            <div class="row" style="display: none;">
+                <div class="col-md-3 mb-3">
                     <label for="metode_imputasi" class="form-label">Metode Imputasi</label>
                     <select class="form-select" id="metode_imputasi" name="metode_imputasi" required>
                         <option value="median" selected>Median</option>
@@ -83,17 +91,52 @@
                     </select>
                 </div>
             </div>
+        </form>
+    </div>
+</div>
 
-            <!-- Info Data -->
-            <div id="infoData" class="alert alert-light border mb-3" style="display: none;">
-                <i class="fas fa-info-circle me-1 text-primary"></i>
-                <span id="infoText">Memuat...</span>
+<!-- LANGKAH 2 -->
+<div id="langkah2" style="display: none;">
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>LANGKAH 2</strong> — STATISTIK DATA SEBELUM DIPROSES
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="card border">
+                        <div class="stat-card">
+                            <div class="stat-number text-primary" id="statTotalHari">0</div>
+                            <div class="stat-label">Total Hari dalam Rentang</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border">
+                        <div class="stat-card">
+                            <div class="stat-number text-success" id="statHariData">0</div>
+                            <div class="stat-label">Hari Ada Data (Asli)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border">
+                        <div class="stat-card">
+                            <div class="stat-number text-danger" id="statHariKosong">0</div>
+                            <div class="stat-label">Hari Kosong (Missing)</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <button type="submit" class="btn btn-primary">
+            <!-- Warning -->
+            <div id="warningData" style="display: none;"></div>
+
+            <!-- Button Proses -->
+            <button type="button" class="btn btn-primary" id="btnProses">
                 <i class="fas fa-cogs me-1"></i> Proses Preprocessing
             </button>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -146,49 +189,68 @@
     </div>
 
     <div class="col-lg-4">
-        <!-- Info Outlier -->
+        <!-- Ringkasan Hasil Preprocessing -->
         <div class="card mb-4">
             <div class="card-header">
-                <i class="fas fa-exclamation-triangle me-1"></i> Outlier Terdeteksi ({{ count($outliers) }})
+                <i class="fas fa-clipboard-check me-1"></i> Ringkasan Hasil Preprocessing
             </div>
             <div class="card-body">
-                @if (count($outliers) > 0)
-                <table class="table table-sm table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Asli</th>
-                            <th>Pengganti</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($outliers as $o)
-                        <tr>
-                            <td>{{ \Carbon\Carbon::parse($o['tanggal'])->format('d/m/Y') }}</td>
-                            <td><span class="text-danger fw-bold">{{ $o['nilai_asli'] }}</span></td>
-                            <td><span class="text-success fw-bold">{{ $o['nilai_pengganti'] }}</span></td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                @else
-                <p class="text-muted mb-0">Tidak ada outlier terdeteksi.</p>
-                @endif
-            </div>
-        </div>
+                @php
+                    $config = session('preprocessing_config');
+                    $metodeLabel = match($config['metode_imputasi'] ?? 'median') {
+                        'mean' => 'Mean (Rata-rata)',
+                        'zero' => 'Isi 0',
+                        default => 'Median',
+                    };
+                    $nilaiImputasi = $config['nilai_imputasi'] ?? 0;
+                    $missingCount = collect($preprocessed)->where('is_missing', true)->count();
+                @endphp
 
-        <!-- Ringkasan -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-chart-pie me-1"></i> Ringkasan
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li><strong>Total data:</strong> {{ count($preprocessed) }} hari</li>
-                    <li><strong>Missing values:</strong> {{ collect($preprocessed)->where('is_missing', true)->count() }} hari</li>
-                    <li><strong>Outlier:</strong> {{ count($outliers) }} data</li>
-                    <li><strong>Rata-rata:</strong> {{ round(collect($preprocessed)->avg('jumlah'), 2) }} kantong/hari</li>
-                </ul>
+                <table class="table table-sm mb-3">
+                    <tr>
+                        <td><strong>Penanganan Missing Values</strong></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Hari tanpa permintaan diisi dengan <strong>{{ $metodeLabel }}</strong> = <strong>{{ $nilaiImputasi }}</strong>
+                            <br><small class="text-muted">{{ $missingCount }} hari missing terdeteksi</small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Penanganan Outlier</strong></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Deteksi menggunakan metode <strong>IQR (Interquartile Range)</strong>, diganti dengan <strong>Median</strong> = <strong>{{ count($outliers) > 0 ? $outliers[0]['nilai_pengganti'] : '-' }}</strong>
+                            <br><small class="text-muted">{{ count($outliers) }} outlier terdeteksi</small>
+                        </td>
+                    </tr>
+                </table>
+
+                @if (count($outliers) > 0)
+                <hr>
+                <small class="fw-bold">Detail Outlier:</small>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <table class="table table-sm table-bordered mt-1">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Asli</th>
+                                <th>Pengganti</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($outliers as $o)
+                            <tr>
+                                <td>{{ \Carbon\Carbon::parse($o['tanggal'])->format('d/m/Y') }}</td>
+                                <td><span class="text-danger fw-bold">{{ $o['nilai_asli'] }}</span></td>
+                                <td><span class="text-success fw-bold">{{ $o['nilai_pengganti'] }}</span></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
             </div>
         </div>
     </div>
@@ -233,14 +295,8 @@
                 orderable: false,
                 searchable: false
             },
-            {
-                data: 'tanggal_formatted',
-                name: 'tanggal'
-            },
-            {
-                data: 'rumah_sakit_nama',
-                name: 'rumahSakit.nama'
-            },
+            { data: 'tanggal_formatted', name: 'tanggal' },
+            { data: 'rumah_sakit_nama', name: 'rumahSakit.nama' },
             {
                 data: 'golongan_darah',
                 name: 'golongan_darah',
@@ -248,14 +304,8 @@
                     return '<span class="badge bg-danger">' + data + '</span>';
                 }
             },
-            {
-                data: 'komponen_kode',
-                name: 'komponenDarah.kode'
-            },
-            {
-                data: 'jumlah',
-                name: 'jumlah'
-            }
+            { data: 'komponen_kode', name: 'komponenDarah.kode' },
+            { data: 'jumlah', name: 'jumlah' }
         ],
         language: {
             processing: '<div class="spinner-border spinner-border-sm text-danger"></div> Memuat...',
@@ -264,33 +314,29 @@
             info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
             infoEmpty: 'Tidak ada data',
             zeroRecords: 'Data tidak ditemukan',
-            paginate: {
-                first: 'Awal',
-                last: 'Akhir',
-                next: '&raquo;',
-                previous: '&laquo;'
-            }
+            paginate: { first: 'Awal', last: 'Akhir', next: '&raquo;', previous: '&laquo;' }
         },
-        order: [
-            [1, 'asc']
-        ]
+        order: [[1, 'asc']]
     });
 
-    // AJAX cek jumlah data saat filter berubah
+    // AJAX cek jumlah data saat filter berubah → munculkan LANGKAH 2
     function cekDataTersedia() {
         var golongan = $('#golongan_darah').val();
         var komponen = $('#komponen_darah_id').val();
         var mulai = $('#tanggal_mulai').val();
         var selesai = $('#tanggal_selesai').val();
-        var metode = $('#metode_imputasi').val();
 
         if (!golongan || !komponen || !mulai || !selesai) {
-            $('#infoData').hide();
+            $('#langkah2').hide();
             return;
         }
 
-        $('#infoData').show();
-        $('#infoText').html('<i class="fas fa-spinner fa-spin"></i> Mengecek data...');
+        // Tampilkan langkah 2 dengan loading
+        $('#langkah2').show();
+        $('#statTotalHari').text('...');
+        $('#statHariData').text('...');
+        $('#statHariKosong').text('...');
+        $('#warningData').hide();
 
         $.get('{{ route("preprocessing.cek-data") }}', {
             golongan_darah: golongan,
@@ -298,22 +344,31 @@
             tanggal_mulai: mulai,
             tanggal_selesai: selesai
         }, function(data) {
-            var html = '<strong>' + data.total_record + ' record</strong> ditemukan | ';
-            html += '<strong>' + data.hari_ada_data + ' hari</strong> ada data dari total <strong>' + data.total_hari_range + ' hari</strong> dalam range | ';
-            var nilaiImputasi = metode === 'mean' ? data.mean : (metode === 'median' ? data.median : 0);
-            var labelMetode = metode === 'mean' ? 'mean' : (metode === 'median' ? 'median' : '0');
-            html += '<strong>' + data.hari_kosong + ' hari</strong> akan diisi dengan <strong>' + labelMetode + ' (' + nilaiImputasi + ')</strong>';
+            $('#statTotalHari').text(data.total_hari_range);
+            $('#statHariData').text(data.hari_ada_data);
+            $('#statHariKosong').text(data.hari_kosong);
 
+            // Warning
+            var warningHtml = '';
             if (data.hari_ada_data < 4) {
-                html += '<br><span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Data terlalu sedikit! Minimal 4 hari ada data.</span>';
+                warningHtml = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-1"></i> Data terlalu sedikit! Minimal 4 hari ada data untuk proses preprocessing.</div>';
             } else if (data.hari_kosong > data.hari_ada_data * 3) {
-                html += '<br><span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Banyak hari kosong. Pertimbangkan mempersempit range tanggal.</span>';
+                warningHtml = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-1"></i> Banyak hari kosong (' + data.hari_kosong + ' hari). Pertimbangkan mempersempit range tanggal agar hasil prediksi lebih akurat.</div>';
             }
 
-            $('#infoText').html(html);
+            if (warningHtml) {
+                $('#warningData').html(warningHtml).show();
+            } else {
+                $('#warningData').hide();
+            }
         });
     }
 
-    $('#golongan_darah, #komponen_darah_id, #tanggal_mulai, #tanggal_selesai, #metode_imputasi').on('change', cekDataTersedia);
+    $('#golongan_darah, #komponen_darah_id, #tanggal_mulai, #tanggal_selesai').on('change', cekDataTersedia);
+
+    // Button proses submit form
+    $('#btnProses').on('click', function() {
+        $('#formPreprocessing').submit();
+    });
 </script>
 @endpush

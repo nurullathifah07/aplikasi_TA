@@ -12,7 +12,7 @@
         </h1>
         <p class="lead mt-3">
             Sistem berbasis web untuk memprediksi kebutuhan stok darah di Kabupaten Tanah Laut
-            menggunakan metode Time Series Forecasting (Holt's Linear Exponential Smoothing).
+            menggunakan metode Time Series Forecasting (Holt's Linear).
         </p>
         <div class="mt-4">
             <a href="{{ route('publik.prediksi') }}" class="btn btn-light btn-lg me-2">
@@ -32,8 +32,8 @@
         <p class="mt-3 col-lg-8 mx-auto">
             Sistem ini dikembangkan untuk membantu PMI Kabupaten Tanah Laut dalam mengelola dan memprediksi
             kebutuhan stok darah secara lebih akurat. Dengan memanfaatkan metode
-            <strong>Holt's Linear Exponential Smoothing</strong>, sistem ini mampu memberikan estimasi
-            kebutuhan darah 7 hari ke depan.
+            <strong>Holt's Linear</strong>, sistem ini mampu memberikan estimasi
+            kebutuhan darah sesuai periode tanggal yang dibutuhkan.
         </p>
     </div>
 </section>

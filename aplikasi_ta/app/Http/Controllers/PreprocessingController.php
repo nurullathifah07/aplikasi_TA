@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KomponenDarah;
 use App\Models\PermintaanDarah;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -216,8 +217,8 @@ class PreprocessingController extends Controller
     {
         $count = count($sorted);
         $index = ($percentile / 100) * ($count - 1);
-        $lower = (int) floor($index);
-        $upper = (int) ceil($index);
+        $lower = floor($index);
+        $upper = ceil($index);
         $fraction = $index - $lower;
 
         if ($lower == $upper) {
@@ -233,7 +234,7 @@ class PreprocessingController extends Controller
         $sorted = $values;
         sort($sorted);
         $count = count($sorted);
-        $middle = (int) floor($count / 2);
+        $middle = floor($count / 2);
 
         if ($count % 2 == 0) {
             return ($sorted[$middle - 1] + $sorted[$middle]) / 2;

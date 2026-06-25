@@ -7,7 +7,7 @@
 <div class="hero-section text-center">
     <div class="container">
         <h1 class="fw-bold"><i class="fas fa-chart-bar me-2"></i> Prediksi Kebutuhan Darah</h1>
-        <p class="lead">Prediksi kebutuhan darah 7 hari ke depan menggunakan metode Holt's Linear</p>
+        <p class="lead">Prediksi kebutuhan darah menggunakan metode Holt's Linear</p>
     </div>
 </div>
 
@@ -21,7 +21,7 @@
         <!-- Chart -->
         <div class="card mb-4">
             <div class="card-header">
-                <i class="fas fa-chart-bar me-1"></i> Diagram Prediksi Kebutuhan Darah 7 Hari ke Depan
+                <i class="fas fa-chart-bar me-1"></i> Diagram Prediksi Kebutuhan Darah
             </div>
             <div class="card-body">
                 <canvas id="prediksiChart" height="100"></canvas>

@@ -54,8 +54,9 @@ class PublikController extends Controller
     public function historiTrenChart()
     {
         $bulan = request('bulan', date('Y-m'));
+
         $startDate = \Carbon\Carbon::parse($bulan . '-01')->startOfMonth();
-        $endDate = $startDate->copy()->endOfMonth();
+        $endDate   = $startDate->copy()->endOfMonth();
 
         $data = PermintaanDarah::selectRaw('tanggal, golongan_darah, SUM(jumlah) as total')
             ->whereBetween('tanggal', [$startDate, $endDate])
@@ -63,30 +64,41 @@ class PublikController extends Controller
             ->orderBy('tanggal', 'asc')
             ->get();
 
-        $dates = collect();
+        $dates = [];
+        $allDates = [];
+
         $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
+
         foreach ($period as $date) {
-            $dates->push($date->format('d/m'));
+            $dates[] = $date->format('d/m');
+            $allDates[] = $date->format('Y-m-d');
         }
 
         $golongans = ['A', 'B', 'AB', 'O'];
         $series = [];
 
         foreach ($golongans as $gol) {
+
             $series[$gol] = [];
-            foreach ($period as $date) {
-                $found = $data->first(fn($d) => $d->tanggal->format('Y-m-d') === $date->format('Y-m-d') && $d->golongan_darah === $gol);
+
+            foreach ($allDates as $tgl) {
+
+                $found = $data->first(function ($d) use ($tgl, $gol) {
+                    return $d->tanggal->format('Y-m-d') === $tgl
+                        && $d->golongan_darah === $gol;
+                });
+
                 $series[$gol][] = $found ? (int) $found->total : 0;
             }
-            // Hapus golongan yang semua datanya 0
-            if (array_sum($series[$gol]) === 0) {
+
+            if (array_sum($series[$gol]) == 0) {
                 unset($series[$gol]);
             }
         }
 
         return response()->json([
-            'dates' => $dates,
-            'series' => $series,
+            'dates'  => $dates,
+            'series' => $series
         ]);
     }
 }

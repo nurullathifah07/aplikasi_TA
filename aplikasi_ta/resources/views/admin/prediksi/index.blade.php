@@ -12,7 +12,7 @@
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-brain me-1"></i> Prediksi Kebutuhan Darah 7 Hari ke Depan</span>
+        <span><i class="fas fa-brain me-1"></i> Hasil Prediksi Kebutuhan Darah</span>
         <form action="{{ route('prediksi.generate') }}" method="POST" class="d-inline">
             @csrf
             <button type="submit" class="btn btn-primary btn-sm">

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Akun;
 use App\Models\KomponenDarah;
+use App\Models\RumahSakit;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -32,6 +33,32 @@ class DatabaseSeeder extends Seeder
         KomponenDarah::firstOrCreate(
             ['kode' => 'PRC'],
             ['nama_lengkap' => 'Packed Red Cell']
+        );
+
+        // Buat rumah sakit default
+        RumahSakit::firstOrCreate(
+            ['nama' => 'RS H.Boejasin'],
+            ['alamat' => 'Sarang Halang, Pelaihari']
+        );
+
+        RumahSakit::firstOrCreate(
+            ['nama' => 'RS BCM'],
+            ['alamat' => 'Angsau, Pelaihari']
+        );
+
+        RumahSakit::firstOrCreate(
+            ['nama' => 'Ammariz'],
+            ['alamat' => 'Pelaihari']
+        );
+
+        RumahSakit::firstOrCreate(
+            ['nama' => 'Ibunda'],
+            ['alamat' => 'Pelaihari']
+        );
+
+        RumahSakit::firstOrCreate(
+            ['nama' => 'RS KH Mansyur'],
+            ['alamat' => 'Kintap']
         );
     }
 }

@@ -10,7 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="{{ asset('css/styles.css') }}" rel="stylesheet" />
     <link href="{{ asset('vendor/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}" />
+
     <style>
         /* Navbar - Putih */
         .sb-topnav {
@@ -226,6 +226,7 @@
 <script src="{{ asset('js/datatables-simple-demo.js') }}"></script>
 <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
 
+
 <!-- SweetAlert2 Flash Messages -->
 @if (session('success'))
 <script>
@@ -285,7 +286,7 @@
         }
     });
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 @stack('scripts')
 
 </body>

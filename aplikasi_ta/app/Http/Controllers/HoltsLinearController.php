@@ -25,6 +25,8 @@ class HoltsLinearController extends Controller
             'golongan_darah' => 'required|in:A,B,AB,O',
             'komponen_darah_id' => 'required|exists:komponen_darah,id',
             'rasio_split' => 'required|in:70:30,80:20,90:10',
+            'tanggal_prediksi_mulai' => 'required|date',
+            'tanggal_prediksi_selesai' => 'required|date|after_or_equal:tanggal_prediksi_mulai',
         ]);
 
         // Ambil data preprocessing dari session
@@ -81,8 +83,24 @@ class HoltsLinearController extends Controller
             $bestBeta = (float) $request->beta;
         }
 
+        // Hitung jumlah hari prediksi berdasarkan range tanggal yang dipilih user
+        $lastDate = Carbon::parse(end($tanggal));
+        $prediksiMulai = Carbon::parse($request->tanggal_prediksi_mulai);
+        $prediksiSelesai = Carbon::parse($request->tanggal_prediksi_selesai);
+
+        // Validasi tanggal prediksi harus setelah tanggal terakhir data
+        if ($prediksiMulai->lte($lastDate)) {
+            return redirect()->route('holts.index')
+                ->with('error', 'Tanggal prediksi mulai harus setelah tanggal terakhir data (' . $lastDate->format('d/m/Y') . ').');
+        }
+
+        // Hitung offset dan jumlah hari prediksi
+        $offsetMulai = $lastDate->diffInDays($prediksiMulai);
+        $offsetSelesai = $lastDate->diffInDays($prediksiSelesai);
+        $jumlahHariPrediksi = $prediksiMulai->diffInDays($prediksiSelesai) + 1;
+
         // Jalankan Holt's Linear dengan detail perhitungan
-        $hasilHolts = $this->holtsLinearDetail($trainData, $bestAlpha, $bestBeta, $testSize + 7);
+        $hasilHolts = $this->holtsLinearDetail($trainData, $bestAlpha, $bestBeta, $testSize + $offsetSelesai);
         $detailPerhitungan = $hasilHolts['detail'];
         $forecast = $hasilHolts['forecast'];
 
@@ -94,14 +112,13 @@ class HoltsLinearController extends Controller
         $mape = $this->hitungMAPE($testData, $forecastTest);
         $mae = $this->hitungMAE($testData, $forecastTest);
 
-        // Ambil forecast 7 hari ke depan
-        $forecast7Hari = array_slice($forecast, $testSize, 7);
-        $lastDate = Carbon::parse(end($tanggal));
+        // Ambil forecast untuk range tanggal yang dipilih user
+        $forecastRange = array_slice($forecast, $testSize + $offsetMulai - 1, $jumlahHariPrediksi);
         $prediksiHari = [];
-        for ($i = 0; $i < 7; $i++) {
+        for ($i = 0; $i < $jumlahHariPrediksi; $i++) {
             $prediksiHari[] = [
-                'tanggal' => $lastDate->copy()->addDays($i + 1)->format('Y-m-d'),
-                'nilai' => max(0, round($forecast7Hari[$i], 2)),
+                'tanggal' => $prediksiMulai->copy()->addDays($i)->format('Y-m-d'),
+                'nilai' => max(0, round($forecastRange[$i] ?? 0, 2)),
             ];
         }
 
@@ -126,7 +143,7 @@ class HoltsLinearController extends Controller
             ]);
         }
 
-        // Susun tabel rekapitulasi lengkap (data latih + data uji + prediksi 7 hari)
+        // Susun tabel rekapitulasi lengkap (data latih + data uji + prediksi)
         $rekapitulasi = [];
 
         // Bagian data latih
@@ -155,15 +172,15 @@ class HoltsLinearController extends Controller
             ];
         }
 
-        // Bagian prediksi 7 hari
-        for ($i = 0; $i < 7; $i++) {
+        // Bagian prediksi (range user)
+        for ($i = 0; $i < $jumlahHariPrediksi; $i++) {
             $rekapitulasi[] = [
-                'hari' => $totalData + $i + 1,
+                'hari' => $totalData + $offsetMulai + $i,
                 'tanggal' => $prediksiHari[$i]['tanggal'],
                 'permintaan' => '?',
                 'level' => '-',
                 'trend' => '-',
-                'forecast' => round($forecast7Hari[$i], 4),
+                'forecast' => $prediksiHari[$i]['nilai'],
                 'tipe' => 'prediksi',
             ];
         }
@@ -182,7 +199,7 @@ class HoltsLinearController extends Controller
             'data_aktual' => $testData,
             'data_forecast' => $forecastTest,
             'test_tanggal' => $testTanggal,
-            'prediksi_7_hari' => $prediksiHari,
+            'prediksi_hari' => $prediksiHari,
             'golongan_darah' => $request->golongan_darah,
             'komponen_darah_id' => $request->komponen_darah_id,
             'rekapitulasi' => $rekapitulasi,
@@ -191,7 +208,7 @@ class HoltsLinearController extends Controller
         session(['holts_hasil' => $hasil]);
 
         return redirect()->route('holts.index')
-            ->with('success', 'Proses Holt\'s Linear berhasil. MAPE: ' . round($mape, 2) . '%');
+            ->with('success', 'Proses Holt\'s Linear berhasil. MAPE: ' . round($mape, 2) . '% | Prediksi: ' . $jumlahHariPrediksi . ' hari');
     }
 
     // Implementasi Holt's Linear dengan detail perhitungan setiap iterasi
@@ -328,4 +345,5 @@ class HoltsLinearController extends Controller
 
         return $sum / $n;
     }
+    
 }
