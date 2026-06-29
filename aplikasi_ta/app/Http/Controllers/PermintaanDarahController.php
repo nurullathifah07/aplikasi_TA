@@ -37,28 +37,23 @@ class PermintaanDarahController extends Controller
             ->addColumn('komponen_kode', function ($row) {
                 return $row->komponenDarah->kode;
             })
-            ->addColumn('status_badge', function ($row) {
-                if ($row->status == 'terpenuhi') {
-                    return '<span class="badge bg-success">Terpenuhi</span>';
-                } elseif ($row->status == 'pending') {
-                    return '<span class="badge bg-warning">Pending</span>';
-                }
-                return '<span class="badge bg-danger">Ditolak</span>';
-            })
             ->addColumn('aksi', function ($row) {
                 $html = '';
-                if ($row->status == 'pending') {
-                    $html .= '<button class="btn btn-success btn-sm btn-status" data-id="' . $row->id . '" data-status="terpenuhi" title="Setujui"><i class="fas fa-check"></i></button> ';
-                    $html .= '<button class="btn btn-secondary btn-sm btn-status" data-id="' . $row->id . '" data-status="ditolak" title="Tolak"><i class="fas fa-times"></i></button> ';
-                }
-                $html .= '<a href="' . route('permintaan-darah.edit', $row->id) . '" class="btn btn-warning btn-sm" title="Edit"><i class="fas fa-edit"></i></a> ';
+
+                $html .= '<a href="' . route('permintaan-darah.edit', $row->id) . '" class="btn btn-warning btn-sm" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a> ';
+
                 $html .= '<form action="' . route('permintaan-darah.destroy', $row->id) . '" method="POST" class="d-inline">';
                 $html .= csrf_field() . method_field('DELETE');
-                $html .= '<button type="submit" class="btn btn-danger btn-sm btn-delete" title="Hapus"><i class="fas fa-trash"></i></button>';
+                $html .= '<button type="submit" class="btn btn-danger btn-sm btn-delete" title="Hapus">
+                            <i class="fas fa-trash"></i>
+                        </button>';
                 $html .= '</form>';
+
                 return $html;
             })
-            ->rawColumns(['status_badge', 'aksi'])
+            ->rawColumns(['aksi'])
             ->make(true);
     }
 
@@ -96,7 +91,7 @@ class PermintaanDarahController extends Controller
         return view('admin.permintaan_darah.edit', compact('permintaanDarah', 'rumahSakit', 'komponenDarah'));
     }
 
-    // Saat update, cek perubahan status untuk sinkronisasi stok darah secara otomatis
+    // Saat update, cek perubahan untuk sinkronisasi stok darah secara otomatis
     public function update(Request $request, PermintaanDarah $permintaanDarah)
     {
         $request->validate([
@@ -105,25 +100,12 @@ class PermintaanDarahController extends Controller
             'golongan_darah' => 'required|in:A,B,AB,O',
             'komponen_darah_id' => 'required|exists:komponen_darah,id',
             'jumlah' => 'required|integer|min:1',
-            'status' => 'required|in:pending,terpenuhi,ditolak',
         ]);
 
-        $oldStatus = $permintaanDarah->status;
-        $newStatus = $request->status;
 
         $permintaanDarah->update($request->only(
-            'rumah_sakit_id', 'tanggal', 'golongan_darah', 'komponen_darah_id', 'jumlah', 'status'
+            'rumah_sakit_id', 'tanggal', 'golongan_darah', 'komponen_darah_id', 'jumlah'
         ));
-
-        // Jika status berubah menjadi "terpenuhi", kurangi stok otomatis
-        if ($oldStatus !== 'terpenuhi' && $newStatus === 'terpenuhi') {
-            $this->kurangiStok($permintaanDarah);
-        }
-
-        // Jika status berubah dari "terpenuhi" ke lainnya, kembalikan stok
-        if ($oldStatus === 'terpenuhi' && $newStatus !== 'terpenuhi') {
-            $this->kembalikanStok($permintaanDarah);
-        }
 
         return redirect()->route('permintaan-darah.index')
             ->with('success', 'Permintaan darah berhasil diupdate');
@@ -131,10 +113,7 @@ class PermintaanDarahController extends Controller
 
     public function destroy(PermintaanDarah $permintaanDarah)
     {
-        // Jika permintaan yang dihapus berstatus terpenuhi, kembalikan stok dulu
-        if ($permintaanDarah->status === 'terpenuhi') {
-            $this->kembalikanStok($permintaanDarah);
-        }
+        $this->kembalikanStok($permintaanDarah);
 
         $permintaanDarah->delete();
 
@@ -142,29 +121,6 @@ class PermintaanDarahController extends Controller
             ->with('success', 'Permintaan darah berhasil dihapus');
     }
 
-    // Update status permintaan via AJAX (centang = terpenuhi, x = ditolak)
-    public function updateStatus(Request $request, PermintaanDarah $permintaanDarah)
-    {
-        $request->validate([
-            'status' => 'required|in:terpenuhi,ditolak',
-        ]);
-
-        $oldStatus = $permintaanDarah->status;
-        $newStatus = $request->status;
-
-        $permintaanDarah->update(['status' => $newStatus]);
-
-        // Jika status berubah menjadi "terpenuhi", kurangi stok otomatis
-        if ($oldStatus !== 'terpenuhi' && $newStatus === 'terpenuhi') {
-            $this->kurangiStok($permintaanDarah);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Status berhasil diubah menjadi ' . $newStatus,
-            'status' => $newStatus,
-        ]);
-    }
 
     // Mengurangi stok darah dan mencatat log keluar saat permintaan dipenuhi
     private function kurangiStok(PermintaanDarah $permintaan)
@@ -188,7 +144,7 @@ class PermintaanDarahController extends Controller
         }
     }
 
-    // Mengembalikan stok darah dan mencatat log masuk saat status dibatalkan dari terpenuhi
+    // Mengembalikan stok darah dan mencatat log masuk
     private function kembalikanStok(PermintaanDarah $permintaan)
     {
         $stok = StokDarah::where('golongan_darah', $permintaan->golongan_darah)

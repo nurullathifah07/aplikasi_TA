@@ -48,7 +48,6 @@
                     <th>Golongan</th>
                     <th>Komponen</th>
                     <th>Jumlah</th>
-                    <th>Status</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -69,7 +68,7 @@
             <div class="modal-body">
                 <div class="alert alert-info">
                     <small>
-                        <strong>Format header:</strong> tanggal, id_rs, golongan_darah, komponen, jumlah, status<br>
+                        <strong>Format header:</strong> tanggal, id_rs, golongan_darah, komponen, jumlah<br>
                         <strong>Catatan:</strong> Data dimulai dari baris ke-2 (baris 1 = header). Jika header tidak sesuai maka import gagal.<br>
                         <a href="{{ route('permintaan-darah.template') }}" class="fw-bold">
                             <i class="fas fa-download me-1"></i> Klik disini untuk download template
@@ -122,10 +121,21 @@ var table = $('#permintaanTable').DataTable({
         { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
         { data: 'tanggal_formatted', name: 'tanggal' },
         { data: 'rumah_sakit_nama', name: 'rumahSakit.nama' },
-        { data: 'golongan_darah', name: 'golongan_darah', render: function(data) { return '<span class="badge bg-danger">' + data + '</span>'; } },
+        {
+            data: 'golongan_darah',
+            name: 'golongan_darah',
+            render: function(data) {
+                return '<span class="badge bg-danger">' + data + '</span>';
+            }
+        },
         { data: 'komponen_kode', name: 'komponenDarah.kode' },
-        { data: 'jumlah', name: 'jumlah', render: function(data) { return data + ' kantong'; } },
-        { data: 'status_badge', name: 'status' },
+        {
+            data: 'jumlah',
+            name: 'jumlah',
+            render: function(data) {
+                return data + ' kantong';
+            }
+        },
         { data: 'aksi', name: 'aksi', orderable: false, searchable: false }
     ],
     language: {
@@ -135,7 +145,12 @@ var table = $('#permintaanTable').DataTable({
         info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
         infoEmpty: 'Tidak ada data',
         zeroRecords: 'Data tidak ditemukan',
-        paginate: { first: 'Awal', last: 'Akhir', next: '&raquo;', previous: '&laquo;' }
+        paginate: {
+            first: 'Awal',
+            last: 'Akhir',
+            next: '&raquo;',
+            previous: '&laquo;'
+        }
     },
     order: [[1, 'desc']]
 });
@@ -149,7 +164,11 @@ document.getElementById('btnImport').addEventListener('click', function() {
     const btnImport = this;
 
     if (!fileInput.files.length) {
-        Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih file Excel terlebih dahulu.' });
+        Swal.fire({
+            icon: 'warning',
+            title: 'Perhatian',
+            text: 'Pilih file Excel terlebih dahulu.'
+        });
         return;
     }
 
@@ -162,7 +181,9 @@ document.getElementById('btnImport').addEventListener('click', function() {
     fetch('{{ route("permintaan-darah.import") }}', {
         method: 'POST',
         body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => response.json())
     .then(data => {
@@ -171,70 +192,43 @@ document.getElementById('btnImport').addEventListener('click', function() {
 
         if (data.success) {
             let html = '<div class="alert alert-success"><i class="fas fa-check-circle me-1"></i> ' + data.message + '</div>';
+
             if (data.errors && data.errors.length > 0) {
                 html += '<div class="alert alert-warning"><strong>Peringatan:</strong><ul class="mb-0 mt-1">';
-                data.errors.forEach(function(err) { html += '<li><small>' + err + '</small></li>'; });
+                data.errors.forEach(function(err) {
+                    html += '<li><small>' + err + '</small></li>';
+                });
                 html += '</ul></div>';
             }
+
             result.innerHTML = html;
             result.style.display = 'block';
             table.ajax.reload();
+
         } else {
+
             let html = '<div class="alert alert-danger"><i class="fas fa-times-circle me-1"></i> ' + data.message + '</div>';
+
             if (data.errors && data.errors.length > 0) {
                 html += '<div class="alert alert-warning"><strong>Detail error:</strong><ul class="mb-0 mt-1">';
-                data.errors.forEach(function(err) { html += '<li><small>' + err + '</small></li>'; });
+                data.errors.forEach(function(err) {
+                    html += '<li><small>' + err + '</small></li>';
+                });
                 html += '</ul></div>';
             }
+
             result.innerHTML = html;
             result.style.display = 'block';
         }
     })
-    .catch(error => {
+    .catch(() => {
         loader.style.display = 'none';
         btnImport.disabled = false;
-        result.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times-circle me-1"></i> Terjadi kesalahan. Pastikan file sesuai format dan header benar.</div>';
+
+        result.innerHTML =
+            '<div class="alert alert-danger"><i class="fas fa-times-circle me-1"></i> Terjadi kesalahan. Pastikan file sesuai format dan header benar.</div>';
+
         result.style.display = 'block';
-    });
-});
-
-// AJAX Update Status (centang & x) - langsung tanpa alert
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.btn-status');
-    if (!btn) return;
-
-    const id = btn.dataset.id;
-    const status = btn.dataset.status;
-    const row = btn.closest('tr');
-    const statusCell = row.querySelector('td:nth-child(7)');
-    const actionBtns = row.querySelectorAll('.btn-status');
-
-    actionBtns.forEach(b => { b.disabled = true; });
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-    fetch('/admin/permintaan-darah/' + id + '/update-status', {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({ status: status })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            if (status === 'terpenuhi') {
-                statusCell.innerHTML = '<span class="badge bg-success">Terpenuhi</span>';
-            } else {
-                statusCell.innerHTML = '<span class="badge bg-danger">Ditolak</span>';
-            }
-            actionBtns.forEach(b => b.remove());
-        }
-    })
-    .catch(() => {
-        actionBtns.forEach(b => { b.disabled = false; });
-        btn.innerHTML = status === 'terpenuhi' ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
     });
 });
 </script>

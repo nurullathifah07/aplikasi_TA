@@ -16,7 +16,6 @@ class PermintaanDarah extends Model
         'golongan_darah',
         'komponen_darah_id',
         'jumlah',
-        'status',
     ];
 
     protected function casts(): array

@@ -42,7 +42,6 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('permintaan-darah-data', [\App\Http\Controllers\PermintaanDarahController::class, 'data'])->name('permintaan-darah.data');
     Route::post('permintaan-darah/import', [\App\Http\Controllers\PermintaanDarahController::class, 'import'])->name('permintaan-darah.import');
     Route::get('permintaan-darah-template', [\App\Http\Controllers\PermintaanDarahController::class, 'downloadTemplate'])->name('permintaan-darah.template');
-    Route::patch('permintaan-darah/{permintaanDarah}/update-status', [\App\Http\Controllers\PermintaanDarahController::class, 'updateStatus'])->name('permintaan-darah.update-status');
 
     // Stok Darah
     Route::resource('stok-darah', \App\Http\Controllers\StokDarahController::class);

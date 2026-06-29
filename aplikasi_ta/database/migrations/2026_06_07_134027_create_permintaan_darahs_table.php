@@ -15,7 +15,6 @@ return new class extends Migration
             $table->enum('golongan_darah', ['A', 'B', 'AB', 'O']);
             $table->foreignId('komponen_darah_id')->constrained('komponen_darah')->onDelete('cascade');
             $table->integer('jumlah');
-            $table->enum('status', ['pending', 'terpenuhi', 'ditolak'])->default('pending');
             $table->timestamps();
         });
     }

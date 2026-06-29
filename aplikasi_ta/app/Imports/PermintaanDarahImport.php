@@ -14,7 +14,7 @@ class PermintaanDarahImport implements ToArray, WithHeadingRow
     public function array(array $rows)
     {
         // Validasi header
-        $expectedHeaders = ['tanggal', 'id_rs', 'golongan_darah', 'komponen', 'jumlah', 'status'];
+        $expectedHeaders = ['tanggal', 'id_rs', 'golongan_darah', 'komponen', 'jumlah'];
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2; // Baris 1 = header, data mulai baris 2
@@ -45,11 +45,6 @@ class PermintaanDarahImport implements ToArray, WithHeadingRow
                 continue;
             }
 
-            // Validasi status
-            $status = strtolower($row['status'] ?? 'pending');
-            if (!in_array($status, ['pending', 'terpenuhi', 'ditolak'])) {
-                $status = 'pending';
-            }
 
             // Parse tanggal (support format Excel numeric atau string)
             $tanggal = $this->parseTanggal($row['tanggal']);
@@ -65,7 +60,6 @@ class PermintaanDarahImport implements ToArray, WithHeadingRow
                 'golongan_darah' => strtoupper($row['golongan_darah']),
                 'komponen_darah_id' => $komponen->id,
                 'jumlah' => (int) $row['jumlah'],
-                'status' => $status,
             ]);
 
             $this->imported++;

@@ -80,18 +80,6 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-
-                <div class="col-md-3 mb-3">
-                    <label for="status" class="form-label">Status</label>
-                    <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
-                        <option value="pending" {{ old('status', $permintaanDarah->status) == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="terpenuhi" {{ old('status', $permintaanDarah->status) == 'terpenuhi' ? 'selected' : '' }}>Terpenuhi</option>
-                        <option value="ditolak" {{ old('status', $permintaanDarah->status) == 'ditolak' ? 'selected' : '' }}>Ditolak</option>
-                    </select>
-                    @error('status')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
             </div>
 
             <div class="d-flex gap-2">
