@@ -149,24 +149,31 @@
                         <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                         Data Akun
                     </a>
+                    <a class="nav-link {{ request()->routeIs('stok-darah.*') ? 'active' : '' }}" href="{{ route('stok-darah.index') }}">
+                        <div class="sb-nav-link-icon"><i class="fas fa-boxes-stacked"></i></div>
+                        Stok Darah
+                    </a>
 
-                    <!-- TRANSAKSI -->
-                    <div class="sb-sidenav-menu-heading">Transaksi</div>
+                    <!-- Dataset Awal -->
+                    <div class="sb-sidenav-menu-heading">Dataset Awal</div>
 
                     <a class="nav-link {{ request()->routeIs('permintaan-darah.*') ? 'active' : '' }}" href="{{ route('permintaan-darah.index') }}">
                         <div class="sb-nav-link-icon"><i class="fas fa-hand-holding-medical"></i></div>
                         Permintaan Darah
                     </a>
 
-                    <a class="nav-link {{ request()->routeIs('stok-darah.*') ? 'active' : '' }}" href="{{ route('stok-darah.index') }}">
-                        <div class="sb-nav-link-icon"><i class="fas fa-boxes-stacked"></i></div>
-                        Stok Darah
-                    </a>
-
                     <!-- PERHITUNGAN -->
                     <div class="sb-sidenav-menu-heading">Perhitungan</div>
 
-                    <a class="nav-link {{ request()->routeIs('preprocessing.*') ? 'active' : '' }}" href="{{ route('preprocessing.index') }}">
+                    <a class="nav-link {{ request()->routeIs('peramalan.*') ? 'active' : '' }}"
+                    href="{{ route('peramalan.index') }}">
+                        <div class="sb-nav-link-icon">
+                            <i class="fas fa-chart-area"></i>
+                        </div>
+                        Proses Peramalan
+                    </a>
+
+                    <!--<a class="nav-link {{ request()->routeIs('preprocessing.*') ? 'active' : '' }}" href="{{ route('preprocessing.index') }}">
                         <div class="sb-nav-link-icon"><i class="fas fa-filter"></i></div>
                         Preprocessing
                     </a>
@@ -174,7 +181,7 @@
                     <a class="nav-link {{ request()->routeIs('holts.*') ? 'active' : '' }}" href="{{ route('holts.index') }}">
                         <div class="sb-nav-link-icon"><i class="fas fa-calculator"></i></div>
                         Holt's Linear
-                    </a>
+                    </a>-->
 
                     <a class="nav-link {{ request()->routeIs('evaluasi.*') ? 'active' : '' }}" href="{{ route('evaluasi.index') }}">
                         <div class="sb-nav-link-icon"><i class="fas fa-chart-line"></i></div>

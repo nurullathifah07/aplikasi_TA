@@ -3,6 +3,7 @@
 use App\Http\Controllers\AkunController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ProsesPeramalanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,6 +56,12 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     // Holt's Linear
     Route::get('/holts-linear', [\App\Http\Controllers\HoltsLinearController::class, 'index'])->name('holts.index');
     Route::post('/holts-linear/proses', [\App\Http\Controllers\HoltsLinearController::class, 'proses'])->name('holts.proses');
+
+     Route::get('/peramalan', [ProsesPeramalanController::class, 'index'])
+        ->name('peramalan.index');
+
+    Route::post('/peramalan/proses', [ProsesPeramalanController::class, 'proses'])
+        ->name('peramalan.proses');
 
     // Evaluasi
     Route::get('/evaluasi', [\App\Http\Controllers\EvaluasiController::class, 'index'])->name('evaluasi.index');
